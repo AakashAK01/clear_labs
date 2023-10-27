@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:clear_labs/track_page.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -32,7 +33,11 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
+    setState(() {
+      isLoading = true;
+    });
     getCurrentLocation();
+
     loadMarkersFromDatabase();
   }
 
@@ -53,13 +58,13 @@ class _MapPageState extends State<MapPage> {
 
       int? locationId =
           await LocationDatabaseHelper.insertLocation(locationData);
-      print(locationId);
+
       if (locationId != null) {
         setState(() {
           currentLocation = position;
           _markers.add(
             Marker(
-              markerId: MarkerId(locationId.toString()),
+              markerId: MarkerId('currentLocation'),
               position: LatLng(position.latitude, position.longitude),
               infoWindow: InfoWindow(
                 title: 'Current Location',
@@ -67,6 +72,7 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           );
+          isLoading = false;
         });
 
         GoogleMapController googleMapController = await _controller.future;
@@ -112,6 +118,11 @@ class _MapPageState extends State<MapPage> {
         ),
       );
     }
+
+    setState(() {
+      _markers.addAll(markers);
+      isLoading = false;
+    });
   }
 
   @override
@@ -120,18 +131,32 @@ class _MapPageState extends State<MapPage> {
     print("${currentLocation}:POSITION");
     return SafeArea(
       child: Scaffold(
-        body: Column(
-          children: [
-            Expanded(
-              child: GoogleMap(
-                initialCameraPosition: _getInitialCameraPosition(),
-                markers: _markers,
-                onMapCreated: (GoogleMapController controller) {
-                  _controller.complete(controller);
-                },
+        body: isLoading
+            ? Center(
+                child: CircularProgressIndicator(),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: GoogleMap(
+                      initialCameraPosition: _getInitialCameraPosition(),
+                      markers: _markers,
+                      onMapCreated: (GoogleMapController controller) {
+                        _controller.complete(controller);
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (BuildContext context) => TrackPage()),
+            );
+          },
+          child: Icon(Icons.map_outlined),
         ),
       ),
     );
@@ -139,28 +164,22 @@ class _MapPageState extends State<MapPage> {
 
   CameraPosition _getInitialCameraPosition() {
     int length = locations.length;
-
-    if (length > 0) {
-      print("${locations[length - 1]['latitude']}:LAT");
-      print("${locations[length - 1]['longitude']}:LONG");
-    }
+    print(length);
+    print(currentLocation);
+    double initialLatitude = 0;
+    double initialLongitude = 0;
 
     if (currentLocation != null) {
-      return CameraPosition(
-        target: LatLng(currentLocation!.latitude, currentLocation!.longitude),
-        zoom: 13.5,
-      );
-    } else if (length > 0) {
-      return CameraPosition(
-        target: LatLng(locations[length - 1]['latitude'],
-            locations[length - 1]['longitude']),
-        zoom: 6.5,
-      );
-    } else {
-      return CameraPosition(
-        target: LatLng(0, 0),
-        zoom: 6.5,
-      );
+      initialLatitude = currentLocation!.latitude;
+      initialLongitude = currentLocation!.longitude;
+    } else if (length > 0 || currentLocation == null) {
+      initialLatitude = locations[length - 1]['latitude'];
+      initialLongitude = locations[length - 1]['longitude'];
     }
+
+    return CameraPosition(
+      target: LatLng(initialLatitude, initialLongitude),
+      zoom: 13.5,
+    );
   }
 }

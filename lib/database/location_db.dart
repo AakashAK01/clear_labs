@@ -41,21 +41,10 @@ class LocationDatabaseHelper {
     return db.query('location', orderBy: "id");
   }
 
-  static Future<Map<String, dynamic>?> getLocationWithSameCoordinates(
-      LocationData locationData) async {
+  static Future<void> deleteCity(int id) async {
     final db = await LocationDatabaseHelper.db();
-    final result = await db.query('location',
-        where: 'latitude = ? AND longitude = ?',
-        whereArgs: [locationData.latitude, locationData.longitude]);
-
-    if (result.isNotEmpty) {
-      return result.first;
-    }
-
-    return null;
-  }
-
-  static void showDialogToUser(String existingLocationTime) {
-    print("ALready connected");
+    try {
+      await db.delete("location", where: "id=?", whereArgs: [id]);
+    } catch (err) {}
   }
 }
