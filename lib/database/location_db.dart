@@ -21,24 +21,19 @@ class LocationDatabaseHelper {
 
   static Future<int?> insertLocation(LocationData locationData) async {
     final db = await LocationDatabaseHelper.db();
-    final existingLocation = await getLocationWithSameCoordinates(locationData);
+    // final existingLocation = await getLocationWithSameCoordinates(locationData);
 
-    if (existingLocation == null) {
-      final data = {
-        'latitude': locationData.latitude,
-        'longitude': locationData.longitude,
-        'time': locationData.time,
-      };
-
-      final id = await db.insert('location', data,
-          conflictAlgorithm: sql.ConflictAlgorithm.replace);
-      return id;
-    } else {
-      // Display a dialog to inform the user that the location is already recorded
-      // You can replace this with your dialog implementation
-      showDialogToUser(existingLocation['time']);
-      return null;
-    }
+    final data = {
+      'latitude': locationData.latitude,
+      'longitude': locationData.longitude,
+      'time': locationData.time,
+    };
+    final result = await db.query('location',
+        where: 'latitude = ? AND longitude = ?',
+        whereArgs: [locationData.latitude, locationData.longitude]);
+    final id = await db.insert('location', data,
+        conflictAlgorithm: sql.ConflictAlgorithm.replace);
+    return id;
   }
 
   static Future<List<Map<String, dynamic>>> getlocation() async {
